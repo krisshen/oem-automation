@@ -121,7 +121,7 @@ class AutomateOEM {
     private static void sendMail(File attachment) {
 
         // Recipient's email ID needs to be mentioned.
-        String to = "Kris Shen <Kris.Shen@ird.govt.nz>";
+        String to = loadConfig().get("emailAddress").toString();
 
         // Sender's email ID needs to be mentioned
         String from = "Kris Shen <Kris.Shen@ird.govt.nz>";
