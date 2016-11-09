@@ -1,0 +1,9 @@
+OEM:
+  url: ""
+  username: ""
+  password: ""
+firefoxpath: ""
+keepAliveTime: 7200
+screenShotInterval: 600
+emailNotification: true
+emailAddress: ""
