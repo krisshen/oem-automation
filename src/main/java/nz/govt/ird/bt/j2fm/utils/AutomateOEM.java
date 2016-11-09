@@ -30,7 +30,6 @@ class AutomateOEM {
     static WebDriver webDriver;
     static WebDriverWait webDriverWait;
 
-    //
     static boolean isAllLinkClicked = false;
 
     private static Map<String, Object> loadConfig() {
@@ -89,7 +88,8 @@ class AutomateOEM {
     }
 
     /**
-     *
+     * keep OEM session alive and
+     * send out screenshots to your email box
      * @param keepAliveTime
      * @param screenShotInterval
      */
@@ -109,9 +109,10 @@ class AutomateOEM {
                 try {
                     screenshotFile = new File(System.getProperty("user.dir") + "/screenshot_" + aliveTimeMS + ".png");
                     FileUtils.copyFile(scrFile, screenshotFile);
-                    //try to click 'All'
+                    //after 20mins, try to click 'All'
                     if (!isAllLinkClicked && aliveTimeMS >= 20 * 60 * 1000) {
                         findAndClick("//*[@id=\"emTemplate:timeSelector:allLink\"]");
+                        isAllLinkClicked = true;
                     }
                     //send email
                     if ((Boolean)loadConfig().get("emailNotification")) {
