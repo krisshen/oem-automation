@@ -16,22 +16,22 @@ import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
 import javax.mail.*;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
+import javax.mail.internet.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Properties;
 
-
-
 class AutomateOEM {
 
-    //interval time set to 5 mins
+    //click interval time set to 5 mins, to make sure OEM session wont timeout
     static int clickIntervalTime = 300 * 1000;
+    static WebDriver webDriver;
+    static WebDriverWait webDriverWait;
+
+    //
+    static boolean isAllLinkClicked = false;
 
     private static Map<String, Object> loadConfig() {
         File inputFile = new File(System.getProperty("user.dir") + File.separator + "src/main/resources/config.yaml");
@@ -50,8 +50,8 @@ class AutomateOEM {
         //initialize
         FirefoxBinary firefoxBinary = new FirefoxBinary(new File((String) config.get("firefoxpath")));
         FirefoxProfile firefoxProfile = new FirefoxProfile();
-        WebDriver webDriver = new FirefoxDriver(firefoxBinary, firefoxProfile);
-        WebDriverWait webDriverWait = new WebDriverWait(webDriver, 20);
+        webDriver = new FirefoxDriver(firefoxBinary, firefoxProfile);
+        webDriverWait = new WebDriverWait(webDriver, 20);
 
         //open website
         webDriver.get((String) ((Map)config.get("OEM")).get("url"));
@@ -65,31 +65,35 @@ class AutomateOEM {
         webDriverWait.until(ExpectedConditions.visibilityOfAllElementsLocatedBy(By.id("emTemplate:ch_ln")));
 
         //click 'WebLogic Domain'
-        findAndClick(webDriver, webDriverWait, "/html/body/div[2]/div/form/div/div[2]/div/div[5]/div/div[1]/div[2]/div/div[1]/div/div[5]/div/div[1]/div[2]/div/div/div/div[1]/table/tbody/tr[4]/td/div/span[1]/a");
+        findAndClick("/html/body/div[2]/div/form/div/div[2]/div/div[5]/div/div[1]/div[2]/div/div[1]/div/div[5]/div/div[1]/div[2]/div/div/div/div[1]/table/tbody/tr[4]/td/div/span[1]/a");
 
         //click 'eai-portal'
-        findAndClick(webDriver, webDriverWait, "//*[@title=\"/Farm_eai-portal/eai-portal\"]");
+        findAndClick("//*[@title=\"/Farm_eai-portal/eai-portal\"]");
 
         //click 'soa_server1'
-        findAndClick(webDriver, webDriverWait, "/html/body/div[2]/div/form/div[2]/div[2]/div/div[5]/div/div[1]/div[2]/div/div[3]/div/div[5]/div/div[1]/div[2]/div/div[3]/div/div/div/div/div/div/div/table/tbody/tr[1]/td/table/tbody/tr/td[1]/div/div/div/div[2]/div/div/div[2]/div/div[3]/div/div[2]/table/tbody/tr[2]/td[1]/span/a[2]");
+        findAndClick("/html/body/div[2]/div/form/div[2]/div[2]/div/div[5]/div/div[1]/div[2]/div/div[3]/div/div[5]/div/div[1]/div[2]/div/div[3]/div/div/div/div/div/div/div/table/tbody/tr[1]/td/table/tbody/tr/td[1]/div/div/div/div[2]/div/div/div[2]/div/div[3]/div/div[2]/table/tbody/tr[2]/td[1]/span/a[2]");
 
         //click 'WebLogic Server'
-        findAndClick(webDriver, webDriverWait, "//td[a=\"WebLogic Server\"]");
+        findAndClick("//td[a=\"WebLogic Server\"]");
 
         //click 'Performance Summary'
-        findAndClick(webDriver, webDriverWait, "//tr[td=\"Performance Summary\"]");
+        findAndClick("//tr[td=\"Performance Summary\"]");
 
         //maximize window
         webDriver.manage().window().maximize();
 
         //wait for 'keepAliveTime' seconds, it does screenshots every 'screenShotInterval' seconds
-        keepOEMAlive(webDriver, (Integer) config.get("keepAliveTime")*1000, (Integer) config.get("screenShotInterval")*1000);
+        keepOEMAlive((Integer) config.get("keepAliveTime")*1000, (Integer) config.get("screenShotInterval")*1000);
 
         webDriver.close();
-
     }
 
-    private static void keepOEMAlive(WebDriver webDriver, int keepAliveTime, int screenShotInterval) {
+    /**
+     *
+     * @param keepAliveTime
+     * @param screenShotInterval
+     */
+    private static void keepOEMAlive(int keepAliveTime, int screenShotInterval) {
 
         int aliveTimeMS = 0;
         File screenshotFile;
@@ -105,11 +109,14 @@ class AutomateOEM {
                 try {
                     screenshotFile = new File(System.getProperty("user.dir") + "/screenshot_" + aliveTimeMS + ".png");
                     FileUtils.copyFile(scrFile, screenshotFile);
-                    //check and send email
+                    //try to click 'All'
+                    if (!isAllLinkClicked && aliveTimeMS >= 20 * 60 * 1000) {
+                        findAndClick("//*[@id=\"emTemplate:timeSelector:allLink\"]");
+                    }
+                    //send email
                     if ((Boolean)loadConfig().get("emailNotification")) {
                         sendMail(screenshotFile);
                     }
-
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -124,7 +131,8 @@ class AutomateOEM {
         String to = loadConfig().get("emailAddress").toString();
 
         // Sender's email ID needs to be mentioned
-        String from = "Kris Shen <Kris.Shen@ird.govt.nz>";
+        String from = "Automation Agent <Kris.Shen@ird.govt.nz>";
+
 
         // Assuming you are sending email from localhost
         String host = "sthcas.ed.ird.govt.nz";
@@ -168,7 +176,6 @@ class AutomateOEM {
 
             // Part two is attachment
             messageBodyPart = new MimeBodyPart();
-//            String filename = "file.txt";
             DataSource source = new FileDataSource(attachment);
             messageBodyPart.setDataHandler(new DataHandler(source));
             messageBodyPart.setFileName(attachment.getName());
@@ -179,7 +186,7 @@ class AutomateOEM {
 
             // Send message
             Transport.send(message);
-//            System.out.println("Sent message successfully....");
+            System.out.println("Sent message successfully....");
         }catch (MessagingException mex) {
             mex.printStackTrace();
         }
@@ -195,11 +202,9 @@ class AutomateOEM {
 
     /**
      * click one element after it is found by selenium
-     * @param webDriver
-     * @param webDriverWait
      * @param xpath
      */
-    private static void findAndClick(WebDriver webDriver, WebDriverWait webDriverWait, String xpath) {
+    private static void findAndClick(String xpath) {
         webDriverWait.until(ExpectedConditions.visibilityOfAllElementsLocatedBy(By.xpath(xpath)));
         webDriver.findElement(By.xpath(xpath)).click();
     }
