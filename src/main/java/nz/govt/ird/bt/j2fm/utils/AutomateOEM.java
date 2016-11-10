@@ -34,6 +34,7 @@ class AutomateOEM {
     static WebDriverWait webDriverWait;
 
     static boolean isAllLinkClicked = false;
+    static boolean is2HoursLinkClicked = false;
 
     private static Map<String, Object> loadConfig() {
         File inputFile = new File(System.getProperty("user.dir") + File.separator + "src/main/resources/config.yaml");
@@ -109,6 +110,12 @@ class AutomateOEM {
                 findAndClick("//*[@id=\"emTemplate:timeSelector:allLink\"]");
                 isAllLinkClicked = true;
                 System.out.println("'All' link is clicked....");
+            }
+            //if session keeps alive for 1 hour, try to click '2 hours'
+            if (!is2HoursLinkClicked && aliveTimeMS >= 60 * 60 * 1000) {
+                findAndClick("//*[@id=\"emTemplate:timeSelector:twoHoursLink\"]");
+                is2HoursLinkClicked = true;
+                System.out.println("'2 hours' link is clicked....");
             }
 
             sleepFor(clickIntervalTime);
