@@ -20,6 +20,9 @@ import javax.mail.internet.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Map;
 import java.util.Properties;
 
@@ -100,20 +103,26 @@ class AutomateOEM {
 
         //click a whatever element every clickIntervalTime ms
         while (aliveTimeMS <= keepAliveTime) {
+
+            //if session keeps alive for 20mins, try to click 'All'
+            if (!isAllLinkClicked && aliveTimeMS >= 20 * 60 * 1000) {
+                findAndClick("//*[@id=\"emTemplate:timeSelector:allLink\"]");
+                isAllLinkClicked = true;
+                System.out.println("'All' link is clicked....");
+            }
+
             sleepFor(clickIntervalTime);
+
+            //just click somewhere...
             webDriver.findElement(By.xpath("/html/body/div[2]/div/form/div[2]/div[2]/div/div[5]/div/div[1]/div[2]/div/div[3]/div/div[5]/div/div[1]/div[1]/div/div[2]/table/tbody/tr/td[3]/table/tbody/tr/td[3]/table/tbody/tr/td[1]/span")).click();
             aliveTimeMS += clickIntervalTime;
+
             //take screenshot if time 'screenShotInterval' past
             if (aliveTimeMS % screenShotInterval == 0) {
                 File scrFile = ((TakesScreenshot)webDriver).getScreenshotAs(OutputType.FILE);
                 try {
-                    screenshotFile = new File(System.getProperty("user.dir") + "/screenshot_" + aliveTimeMS + ".png");
+                    screenshotFile = new File(System.getProperty("user.dir") + "/screenshot_" + getDateTime() + ".png");
                     FileUtils.copyFile(scrFile, screenshotFile);
-                    //after 20mins, try to click 'All'
-                    if (!isAllLinkClicked && aliveTimeMS >= 20 * 60 * 1000) {
-                        findAndClick("//*[@id=\"emTemplate:timeSelector:allLink\"]");
-                        isAllLinkClicked = true;
-                    }
                     //send email
                     if ((Boolean)loadConfig().get("emailNotification")) {
                         sendMail(screenshotFile);
@@ -124,6 +133,13 @@ class AutomateOEM {
             }
         }
 
+    }
+
+    private static String getDateTime() {
+        DateFormat dateFormat = new SimpleDateFormat("yyyyMMddHHmm");
+        Calendar cal = Calendar.getInstance();
+        System.out.println(dateFormat.format(cal.getTime()));
+        return dateFormat.format(cal.getTime());
     }
 
     private static void sendMail(File attachment) {
